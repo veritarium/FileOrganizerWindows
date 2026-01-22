@@ -57,6 +57,9 @@ python build_exe.py
 # Your .exe will be in the dist/ folder
 ```
 
+**Windows Users**: For easy dependency installation, you can also run `install.bat` (double-click) which will automatically install Python dependencies.
+
+
 ## How to Use
 
 ### It's Really This Simple:
@@ -228,6 +231,8 @@ The build script uses PyInstaller with these options:
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
+**Windows Users**: You can also run `install.bat` to automate dependency installation.
 
 ### Application won't start
 

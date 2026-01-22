@@ -165,7 +165,7 @@ class FileOrganizerGUI:
         """Create modern, state-of-the-art UI with animations"""
 
         # Main container with padding
-        main_container = ctk.CTkFrame(self.root, fg_color="transparent")
+        main_container = ctk.CTkScrollableFrame(self.root, fg_color="transparent")
         main_container.pack(fill="both", expand=True, padx=20, pady=20)
 
         # Store widgets for animation
@@ -185,15 +185,6 @@ class FileOrganizerGUI:
         title_label.pack(side="left")
         self.animated_widgets.append(title_label)
 
-        # Theme toggle
-        self.theme_switch = ctk.CTkSwitch(
-            header_frame,
-            text="Dark Mode",
-            command=self.toggle_theme,
-            font=ctk.CTkFont(size=12)
-        )
-        self.theme_switch.pack(side="right", padx=10)
-        self.theme_switch.select()
 
         # Subtitle
         subtitle = ctk.CTkLabel(
@@ -499,12 +490,6 @@ class FileOrganizerGUI:
         else:
             stat_box.configure(fg_color=Theme.BG_DARK)
 
-    def toggle_theme(self):
-        """Toggle between dark and light mode"""
-        if self.theme_switch.get():
-            ctk.set_appearance_mode("dark")
-        else:
-            ctk.set_appearance_mode("light")
 
     def browse_directory(self):
         """Open directory browser with feedback"""
@@ -686,6 +671,25 @@ class FileOrganizerGUI:
             )
         """)
         conn.commit()
+
+        # Ensure all required columns exist
+        cursor.execute("PRAGMA table_info(files)")
+        existing_columns = {row[1] for row in cursor.fetchall()}
+        required_columns = {"id", "path", "name", "extension", "size", "created", "modified", "accessed", "category", "subcategory", "hash", "metadata"}
+        missing_columns = required_columns - existing_columns
+        for column in missing_columns:
+            if column == "id":
+                continue  # id is primary key, should be auto-created
+            # Determine column type based on required schema
+            if column in {"size"}:
+                col_type = "INTEGER"
+            elif column in {"created", "modified", "accessed"}:
+                col_type = "REAL"
+            else:
+                col_type = "TEXT"
+            cursor.execute(f"ALTER TABLE files ADD COLUMN {column} {col_type}")
+        if missing_columns:
+            conn.commit()
 
         # Scan files
         file_count = 0
