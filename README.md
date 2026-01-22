@@ -19,7 +19,7 @@ A **simple, portable Windows application** for organizing your files using virtu
 
 ### Option 1: Download Pre-built Executable (Recommended)
 
-1. Download `FileOrganizer.exe` from the [Releases page](https://github.com/yourusername/FileOrganizerWindows/releases)
+1. Download `FileOrganizer.exe` from the [Releases page](https://github.com/veritarium/FileOrganizerWindows/releases)
 2. Double-click to run - no installation needed!
 3. Select your folder and start organizing
 
@@ -27,7 +27,7 @@ A **simple, portable Windows application** for organizing your files using virtu
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/yourusername/FileOrganizerWindows.git
+git clone https://github.com/veritarium/FileOrganizerWindows.git
 cd FileOrganizerWindows
 
 # 2. Install dependencies
@@ -306,8 +306,8 @@ Contributions are welcome! Feel free to:
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/FileOrganizerWindows/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/FileOrganizerWindows/discussions)
+- **Issues**: [GitHub Issues](https://github.com/veritarium/FileOrganizerWindows/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/veritarium/FileOrganizerWindows/discussions)
 
 ## Related Projects
 
