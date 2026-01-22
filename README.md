@@ -1,19 +1,35 @@
-# File Organizer for Windows
+# File Organizer Pro - Windows Edition
 
 [![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows-blue.svg)]()
+[![UI Framework](https://img.shields.io/badge/UI-CustomTkinter-brightgreen.svg)]()
 
-A **simple, portable Windows application** for organizing your files using virtual views. No installation required - just download and run the `.exe` file!
+A **beautiful, state-of-the-art Windows application** for organizing your files using virtual views. Features a modern dark-themed UI with one-click operation. No installation required - just download and run the `.exe` file!
 
 ## Key Features
 
+### Modern UI
+- **🎨 State-of-the-Art Design** - Beautiful dark-themed interface inspired by professional tools
+- **🌓 Theme Toggle** - Switch between dark and light modes
+- **📊 Real-time Dashboard** - Live statistics showing files, size, categories, duplicates
+- **⚡ One-Click Operation** - Single button does everything automatically
+- **📈 Progress Tracking** - Visual progress bar with phase-by-phase updates
+- **📋 Activity Log** - Detailed real-time logs of all operations
+
+### Powerful Features
 - **Zero Installation** - Single executable file, runs immediately
-- **Simple GUI** - Easy-to-use graphical interface
+- **5 Organization Views** - Category, Date, Size, Extension, and Duplicates
 - **Virtual Organization** - Creates symbolic links without moving files
-- **Multiple Views** - Organize by category, date, size, or find duplicates
-- **Safe** - Original files are never modified or moved
-- **Real-time Progress** - Status bar and detailed logs show what's happening
+- **Smart Categorization** - Recognizes 70+ file types automatically
+- **Duplicate Detection** - SHA-256 hashing with wasted space calculation
+- **Safe Operations** - Original files are never modified or moved
+
+## Screenshots
+
+![File Organizer Pro - Modern UI](https://via.placeholder.com/1200x800/0d1117/58a6ff?text=Coming+Soon+-+Modern+UI+Screenshot)
+
+*Beautiful, professional interface with dark theme, real-time statistics, and one-click operation*
 
 ## Quick Start
 
@@ -43,71 +59,75 @@ python build_exe.py
 
 ## How to Use
 
-### Step 1: Select Directory
+### It's Really This Simple:
 
-1. Click **"Browse..."** button
-2. Choose your top-level folder (e.g., `C:\Users\YourName\Documents`)
-3. All operations will work within this folder
+1. **Select Directory** - Click "Browse" and choose your folder
+2. **Click "Scan & Organize All"** - One button does everything!
+3. **Watch the Magic** - Real-time progress and statistics
+4. **Browse Results** - Open the `_Views` folder to see your organized files
 
-### Step 2: Scan Files
+That's it! The application automatically:
+- ✅ Scans all files and extracts metadata
+- ✅ Computes file hashes for duplicate detection
+- ✅ Creates 5 different organization views
+- ✅ Shows you detailed statistics and results
 
-1. Click **"Scan Files"** button
-2. Wait for the scan to complete (progress shown in status bar)
-3. Files are cataloged in a hidden database (`.file_organizer.db`)
+### Organization Views Created Automatically:
 
-### Step 3: Organize
-
-Choose one or more organization methods:
-
-#### Organize by Category
-Creates folders organized by file type:
+#### 1. By Category (📁)
+70+ file types organized intelligently:
 ```
-_Views/
-  ByCategory/
-    Documents/
-      PDF/
-        invoice.pdf -> C:\...\original_invoice.pdf
-      Word/
-        report.docx -> C:\...\original_report.docx
-    Images/
-      Photos/
-        vacation.jpg -> C:\...\original_vacation.jpg
-    CAD/
-      AutoCAD/
-        drawing.dwg -> C:\...\original_drawing.dwg
+_Views/ByCategory/
+  Documents/PDF/
+  Documents/Word/
+  Images/Photos/
+  CAD/AutoCAD/
+  Code/Python/
+  ...
 ```
 
-#### Organize by Date
-Creates folders by modification date:
+#### 2. By Date (📅)
+Year and month folders:
 ```
-_Views/
-  ByDate/
-    2025/
-      01-January/
-        document.pdf -> C:\...\original_document.pdf
-      02-February/
-        photo.jpg -> C:\...\original_photo.jpg
+_Views/ByDate/
+  2025/01-January/
+  2025/02-February/
+  2024/12-December/
+  ...
 ```
 
-#### Organize by Size
-Groups files by size ranges:
+#### 3. By Size (📏)
+5 size ranges:
 ```
-_Views/
-  BySize/
-    Small (1 KB - 1 MB)/
-      tiny_file.txt -> C:\...\original_tiny_file.txt
-    Large (10-100 MB)/
-      video.mp4 -> C:\...\original_video.mp4
+_Views/BySize/
+  Tiny (< 1 KB)/
+  Small (1 KB - 1 MB)/
+  Medium (1-10 MB)/
+  Large (10-100 MB)/
+  Very Large (> 100 MB)/
 ```
 
-#### Find Duplicates
-Detects duplicate files and groups them:
+#### 4. By Extension (🔤)
+Raw file extensions:
 ```
-_Views/
-  Duplicates/
-    document_duplicates/
-      document.pdf -> C:\...\location1\document.pdf
-      document.pdf -> C:\...\location2\document.pdf
+_Views/ByExtension/
+  PDF/
+  DOCX/
+  JPG/
+  DWG/
+  ...
+```
+
+#### 5. Duplicates (🔍)
+Groups identical files:
+```
+_Views/Duplicates/
+  document_duplicates/
+    document.pdf -> location1/
+    document.pdf -> location2/
+  photo_duplicates/
+    photo.jpg -> location1/
+    photo.jpg -> location2/
 ```
 
 ## Features in Detail

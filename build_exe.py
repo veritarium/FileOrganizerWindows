@@ -29,6 +29,9 @@ def build():
         # Add hidden imports
         "--hidden-import=tkinter",
         "--hidden-import=sqlite3",
+        "--hidden-import=customtkinter",
+        # Collect customtkinter assets
+        "--collect-data=customtkinter",
         # Main file
         "file_organizer_gui.py"
     ]
