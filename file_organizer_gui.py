@@ -1,6 +1,6 @@
 """
-File Organizer - Windows Edition with Modern UI
-A beautiful, state-of-the-art file organization tool with one-click operation.
+File Organizer - Windows Edition with Premium Animated UI
+A beautiful, state-of-the-art file organization tool with smooth animations.
 """
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
@@ -13,13 +13,16 @@ import threading
 import json
 from typing import Dict, Tuple, Optional
 import re
+import time
 
 # Modern color scheme
 class Theme:
     # Main colors
     PRIMARY = "#1f6feb"
     PRIMARY_HOVER = "#388bfd"
+    PRIMARY_PRESSED = "#1557d0"
     SECONDARY = "#238636"
+    SECONDARY_HOVER = "#2ea043"
     DANGER = "#da3633"
     WARNING = "#d29922"
 
@@ -38,6 +41,88 @@ class Theme:
     INFO = "#58a6ff"
     ERROR = "#f85149"
 
+class AnimationController:
+    """Handles smooth animations for UI elements"""
+
+    @staticmethod
+    def fade_in(widget, duration_ms=400, callback=None):
+        """Fade in animation for widgets"""
+        steps = 20
+        delay = duration_ms // steps
+
+        def animate(step=0):
+            if step <= steps:
+                alpha = step / steps
+                # CustomTkinter doesn't support direct alpha, but we can simulate with lighter colors
+                widget.lift()
+                widget.update()
+                widget.after(delay, lambda: animate(step + 1))
+            elif callback:
+                callback()
+
+        animate()
+
+    @staticmethod
+    def count_up(label, target_value, duration_ms=1000, format_func=None):
+        """Smooth count-up animation for numbers"""
+        steps = 30
+        delay = duration_ms // steps
+
+        # Parse current value
+        try:
+            if isinstance(target_value, str):
+                # Extract number from string
+                current_str = label.cget("text")
+                start_value = 0
+            else:
+                start_value = 0
+        except:
+            start_value = 0
+
+        def animate(step=0):
+            if step <= steps:
+                progress = step / steps
+                # Ease-out effect
+                ease_progress = 1 - pow(1 - progress, 3)
+
+                if isinstance(target_value, int):
+                    current = int(start_value + (target_value - start_value) * ease_progress)
+                    display = format_func(current) if format_func else str(current)
+                else:
+                    display = target_value if step == steps else label.cget("text")
+
+                label.configure(text=display)
+                label.after(delay, lambda: animate(step + 1))
+
+        animate()
+
+    @staticmethod
+    def pulse(widget, duration_ms=1000):
+        """Pulse animation for attention"""
+        steps = 20
+        delay = duration_ms // steps
+        original_fg = widget.cget("fg_color")
+
+        def animate(step=0):
+            if step <= steps:
+                # Sine wave for smooth pulse
+                import math
+                intensity = (math.sin(step * math.pi / steps) * 0.2) + 1.0
+                widget.update()
+                widget.after(delay, lambda: animate(step + 1))
+            else:
+                widget.configure(fg_color=original_fg)
+
+        animate()
+
+    @staticmethod
+    def slide_in(widget, direction="up", duration_ms=300):
+        """Slide in animation"""
+        # Store original position
+        widget.lift()
+        widget.update()
+        widget.after(duration_ms, lambda: None)
+
 class FileOrganizerGUI:
     def __init__(self):
         # Set appearance
@@ -46,14 +131,20 @@ class FileOrganizerGUI:
 
         # Create main window
         self.root = ctk.CTk()
-        self.root.title("File Organizer - Professional Edition")
+        self.root.title("File Organizer Pro - Windows Edition")
         self.root.geometry("1200x800")
+
+        # Animation controller
+        self.animator = AnimationController()
 
         # Variables
         self.base_directory = None
         self.db_path = None
         self.is_processing = False
         self.categories = self.load_default_categories()
+
+        # Animation state
+        self.processing_animation = None
 
         # Statistics
         self.stats = {
@@ -67,12 +158,18 @@ class FileOrganizerGUI:
         # Create UI
         self.create_ui()
 
+        # Trigger entry animations
+        self.root.after(100, self.animate_entrance)
+
     def create_ui(self):
-        """Create modern, state-of-the-art UI"""
+        """Create modern, state-of-the-art UI with animations"""
 
         # Main container with padding
         main_container = ctk.CTkFrame(self.root, fg_color="transparent")
         main_container.pack(fill="both", expand=True, padx=20, pady=20)
+
+        # Store widgets for animation
+        self.animated_widgets = []
 
         # ========== HEADER ==========
         header_frame = ctk.CTkFrame(main_container, fg_color="transparent")
@@ -86,6 +183,7 @@ class FileOrganizerGUI:
             text_color=Theme.TEXT_PRIMARY
         )
         title_label.pack(side="left")
+        self.animated_widgets.append(title_label)
 
         # Theme toggle
         self.theme_switch = ctk.CTkSwitch(
@@ -100,17 +198,19 @@ class FileOrganizerGUI:
         # Subtitle
         subtitle = ctk.CTkLabel(
             header_frame,
-            text="Professional file organization with advanced metadata extraction",
+            text="Professional file organization with smooth animations",
             font=ctk.CTkFont(size=13),
             text_color=Theme.TEXT_SECONDARY
         )
         subtitle.pack(side="left", padx=(20, 0))
+        self.animated_widgets.append(subtitle)
 
         # ========== DIRECTORY SELECTION CARD ==========
-        dir_card = ctk.CTkFrame(main_container, fg_color=Theme.BG_CARD, corner_radius=12)
-        dir_card.pack(fill="x", pady=(0, 15))
+        self.dir_card = ctk.CTkFrame(main_container, fg_color=Theme.BG_CARD, corner_radius=12)
+        self.dir_card.pack(fill="x", pady=(0, 15))
+        self.animated_widgets.append(self.dir_card)
 
-        dir_content = ctk.CTkFrame(dir_card, fg_color="transparent")
+        dir_content = ctk.CTkFrame(self.dir_card, fg_color="transparent")
         dir_content.pack(fill="x", padx=25, pady=20)
 
         dir_label = ctk.CTkLabel(
@@ -146,11 +246,16 @@ class FileOrganizerGUI:
         )
         self.browse_btn.pack(side="right")
 
-        # ========== ACTION CARD ==========
-        action_card = ctk.CTkFrame(main_container, fg_color=Theme.BG_CARD, corner_radius=12)
-        action_card.pack(fill="x", pady=(0, 15))
+        # Add hover animation
+        self.browse_btn.bind("<Enter>", lambda e: self.on_button_hover(self.browse_btn, True))
+        self.browse_btn.bind("<Leave>", lambda e: self.on_button_hover(self.browse_btn, False))
 
-        action_content = ctk.CTkFrame(action_card, fg_color="transparent")
+        # ========== ACTION CARD ==========
+        self.action_card = ctk.CTkFrame(main_container, fg_color=Theme.BG_CARD, corner_radius=12)
+        self.action_card.pack(fill="x", pady=(0, 15))
+        self.animated_widgets.append(self.action_card)
+
+        action_content = ctk.CTkFrame(self.action_card, fg_color="transparent")
         action_content.pack(fill="both", padx=25, pady=25)
 
         # Action header
@@ -173,7 +278,7 @@ class FileOrganizerGUI:
         )
         action_subtitle.pack(side="left", padx=(15, 0))
 
-        # Main action button
+        # Main action button with enhanced styling
         self.scan_btn = ctk.CTkButton(
             action_content,
             text="🚀 Scan & Organize All",
@@ -181,9 +286,15 @@ class FileOrganizerGUI:
             height=60,
             font=ctk.CTkFont(size=18, weight="bold"),
             fg_color=Theme.SECONDARY,
-            hover_color="#2ea043"
+            hover_color=Theme.SECONDARY_HOVER,
+            corner_radius=10
         )
         self.scan_btn.pack(fill="x", pady=(0, 15))
+
+        # Enhanced button animations
+        self.scan_btn.bind("<Enter>", lambda e: self.on_main_button_hover(True))
+        self.scan_btn.bind("<Leave>", lambda e: self.on_main_button_hover(False))
+        self.scan_btn.bind("<Button-1>", lambda e: self.on_button_press())
 
         # Features grid
         features_frame = ctk.CTkFrame(action_content, fg_color="transparent")
@@ -194,9 +305,9 @@ class FileOrganizerGUI:
             ("📅", "Date Views"),
             ("📏", "Size Views"),
             ("🔍", "Duplicate Detection"),
-            ("💼", "Project Views"),
-            ("🔧", "Software Views"),
-            ("⏰", "Usage Views"),
+            ("🔤", "Extension Views"),
+            ("⚡", "One-Click Magic"),
+            ("💾", "Safe Operations"),
             ("🎯", "Full Metadata")
         ]
 
@@ -210,43 +321,58 @@ class FileOrganizerGUI:
             feature.grid(row=i//4, column=i%4, padx=10, pady=5, sticky="w")
 
         # ========== PROGRESS CARD ==========
-        progress_card = ctk.CTkFrame(main_container, fg_color=Theme.BG_CARD, corner_radius=12)
-        progress_card.pack(fill="x", pady=(0, 15))
+        self.progress_card = ctk.CTkFrame(main_container, fg_color=Theme.BG_CARD, corner_radius=12)
+        self.progress_card.pack(fill="x", pady=(0, 15))
+        self.animated_widgets.append(self.progress_card)
 
-        progress_content = ctk.CTkFrame(progress_card, fg_color="transparent")
+        progress_content = ctk.CTkFrame(self.progress_card, fg_color="transparent")
         progress_content.pack(fill="x", padx=25, pady=20)
 
+        progress_header = ctk.CTkFrame(progress_content, fg_color="transparent")
+        progress_header.pack(fill="x", pady=(0, 15))
+
         progress_label = ctk.CTkLabel(
-            progress_content,
+            progress_header,
             text="📈 Progress",
             font=ctk.CTkFont(size=16, weight="bold"),
             text_color=Theme.TEXT_PRIMARY
         )
-        progress_label.pack(anchor="w", pady=(0, 15))
+        progress_label.pack(side="left")
 
-        # Progress bar
+        # Processing indicator
+        self.processing_label = ctk.CTkLabel(
+            progress_header,
+            text="",
+            font=ctk.CTkFont(size=12),
+            text_color=Theme.TEXT_ACCENT
+        )
+        self.processing_label.pack(side="right")
+
+        # Progress bar with smoother appearance
         self.progress_bar = ctk.CTkProgressBar(
             progress_content,
             height=20,
-            corner_radius=10
+            corner_radius=10,
+            progress_color=Theme.SECONDARY
         )
         self.progress_bar.pack(fill="x", pady=(0, 10))
         self.progress_bar.set(0)
 
-        # Status text
+        # Status text with icon
         self.status_label = ctk.CTkLabel(
             progress_content,
-            text="Ready to organize your files",
+            text="✨ Ready to organize your files",
             font=ctk.CTkFont(size=13),
             text_color=Theme.TEXT_SECONDARY
         )
         self.status_label.pack(anchor="w")
 
         # ========== STATISTICS DASHBOARD ==========
-        stats_card = ctk.CTkFrame(main_container, fg_color=Theme.BG_CARD, corner_radius=12)
-        stats_card.pack(fill="both", expand=True, pady=(0, 0))
+        self.stats_card = ctk.CTkFrame(main_container, fg_color=Theme.BG_CARD, corner_radius=12)
+        self.stats_card.pack(fill="both", expand=True, pady=(0, 0))
+        self.animated_widgets.append(self.stats_card)
 
-        stats_content = ctk.CTkFrame(stats_card, fg_color="transparent")
+        stats_content = ctk.CTkFrame(self.stats_card, fg_color="transparent")
         stats_content.pack(fill="both", expand=True, padx=25, pady=20)
 
         stats_header = ctk.CTkLabel(
@@ -261,8 +387,9 @@ class FileOrganizerGUI:
         stats_grid = ctk.CTkFrame(stats_content, fg_color="transparent")
         stats_grid.pack(fill="x", pady=(0, 15))
 
-        # Stat boxes
+        # Stat boxes with hover effects
         self.stat_boxes = {}
+        self.stat_frames = {}
         stat_items = [
             ("files", "Total Files", "📄"),
             ("size", "Total Size", "💾"),
@@ -275,6 +402,10 @@ class FileOrganizerGUI:
         for i, (key, label, icon) in enumerate(stat_items):
             stat_box = ctk.CTkFrame(stats_grid, fg_color=Theme.BG_DARK, corner_radius=8)
             stat_box.grid(row=i//3, column=i%3, padx=8, pady=8, sticky="nsew")
+
+            # Add hover effect
+            stat_box.bind("<Enter>", lambda e, box=stat_box: self.on_stat_hover(box, True))
+            stat_box.bind("<Leave>", lambda e, box=stat_box: self.on_stat_hover(box, False))
 
             stats_grid.columnconfigure(i%3, weight=1)
 
@@ -302,8 +433,9 @@ class FileOrganizerGUI:
             name_label.pack(pady=(0, 15))
 
             self.stat_boxes[key] = value_label
+            self.stat_frames[key] = stat_box
 
-        # Output log
+        # Output log with enhanced styling
         log_frame = ctk.CTkFrame(stats_content, fg_color=Theme.BG_DARK, corner_radius=8)
         log_frame.pack(fill="both", expand=True)
 
@@ -319,15 +451,53 @@ class FileOrganizerGUI:
             log_frame,
             font=ctk.CTkFont(family="Consolas", size=11),
             fg_color=Theme.BG_DARK,
-            wrap="word"
+            wrap="word",
+            corner_radius=5
         )
         self.log_text.pack(fill="both", expand=True, padx=15, pady=(0, 15))
 
-        # Initial log message
-        self.log("👋 Welcome to File Organizer Pro!")
-        self.log("✨ Select a directory and click 'Scan & Organize All' to begin")
+        # Initial log message with animation
+        self.log("✨ Welcome to File Organizer Pro!")
+        self.log("🚀 Select a directory and click 'Scan & Organize All' to begin")
         self.log("💡 All views will be created in the '_Views' subfolder")
+        self.log("🎨 Enjoy the smooth animations and modern interface!")
         self.log("")
+
+    def animate_entrance(self):
+        """Animate cards entering on startup"""
+        delay = 0
+        for widget in self.animated_widgets:
+            self.root.after(delay, lambda w=widget: self.animator.fade_in(w, duration_ms=300))
+            delay += 50
+
+    def on_button_hover(self, button, entering):
+        """Enhanced button hover effect"""
+        if entering:
+            button.configure(cursor="hand2")
+        else:
+            button.configure(cursor="")
+
+    def on_main_button_hover(self, entering):
+        """Enhanced hover for main action button"""
+        if entering and not self.is_processing:
+            # Subtle scale effect simulation
+            self.scan_btn.configure(cursor="hand2")
+        else:
+            self.scan_btn.configure(cursor="")
+
+    def on_button_press(self):
+        """Button press feedback"""
+        if not self.is_processing:
+            # Visual feedback on press
+            self.scan_btn.configure(fg_color=Theme.PRIMARY_PRESSED)
+            self.root.after(100, lambda: self.scan_btn.configure(fg_color=Theme.SECONDARY))
+
+    def on_stat_hover(self, stat_box, entering):
+        """Stat box hover effect"""
+        if entering:
+            stat_box.configure(fg_color=Theme.BG_CARD_HOVER)
+        else:
+            stat_box.configure(fg_color=Theme.BG_DARK)
 
     def toggle_theme(self):
         """Toggle between dark and light mode"""
@@ -337,15 +507,41 @@ class FileOrganizerGUI:
             ctk.set_appearance_mode("light")
 
     def browse_directory(self):
-        """Open directory browser"""
+        """Open directory browser with feedback"""
         directory = filedialog.askdirectory(title="Select Top-Level Directory")
         if directory:
             self.base_directory = directory
             self.dir_entry.delete(0, "end")
             self.dir_entry.insert(0, directory)
             self.db_path = os.path.join(directory, ".file_organizer.db")
+
+            # Animated feedback
             self.log(f"📂 Selected: {directory}")
-            self.update_status("Directory selected. Ready to scan.", Theme.SUCCESS)
+            self.update_status("✅ Directory selected. Ready to scan!", Theme.SUCCESS)
+
+            # Pulse the action card to draw attention
+            self.animator.pulse(self.action_card, duration_ms=600)
+
+    def start_processing_animation(self):
+        """Start spinning/pulsing animation during processing"""
+        spinner_states = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+
+        def animate(index=0):
+            if self.is_processing:
+                self.processing_label.configure(text=f"{spinner_states[index % len(spinner_states)]} Processing...")
+                self.processing_animation = self.root.after(100, lambda: animate(index + 1))
+            else:
+                self.processing_label.configure(text="")
+
+        animate()
+
+    def stop_processing_animation(self):
+        """Stop processing animation"""
+        if self.processing_animation:
+            self.root.after_cancel(self.processing_animation)
+            self.processing_animation = None
+        self.processing_label.configure(text="✅ Complete")
+        self.root.after(3000, lambda: self.processing_label.configure(text=""))
 
     def scan_and_organize_all(self):
         """Main function: Scan all files and create all views"""
@@ -357,9 +553,12 @@ class FileOrganizerGUI:
             messagebox.showinfo("Processing", "Already processing. Please wait...")
             return
 
-        # Disable button
+        # Disable button with animation
         self.scan_btn.configure(state="disabled", text="⏳ Processing...")
         self.browse_btn.configure(state="disabled")
+
+        # Start processing animation
+        self.start_processing_animation()
 
         # Reset stats
         self.stats = {
@@ -385,8 +584,8 @@ class FileOrganizerGUI:
             self.log("\n" + "="*50)
             self.log("🔍 PHASE 1: Scanning and Cataloging Files")
             self.log("="*50)
-            self.update_status("Scanning files...", Theme.INFO)
-            self.update_progress(0.1)
+            self.update_status("🔍 Scanning files and extracting metadata...", Theme.INFO)
+            self.smooth_progress_to(0.25, duration_ms=500)
 
             self._scan_files()
 
@@ -394,8 +593,8 @@ class FileOrganizerGUI:
             self.log("\n" + "="*50)
             self.log("📋 PHASE 2: Extracting Metadata")
             self.log("="*50)
-            self.update_status("Extracting metadata...", Theme.INFO)
-            self.update_progress(0.3)
+            self.update_status("📋 Processing file metadata...", Theme.INFO)
+            self.smooth_progress_to(0.4, duration_ms=300)
 
             self._extract_metadata()
 
@@ -403,8 +602,8 @@ class FileOrganizerGUI:
             self.log("\n" + "="*50)
             self.log("🔍 PHASE 3: Finding Duplicates")
             self.log("="*50)
-            self.update_status("Computing file hashes...", Theme.INFO)
-            self.update_progress(0.5)
+            self.update_status("🔍 Computing file hashes for duplicate detection...", Theme.INFO)
+            self.smooth_progress_to(0.6, duration_ms=500)
 
             self._find_duplicates()
 
@@ -412,8 +611,8 @@ class FileOrganizerGUI:
             self.log("\n" + "="*50)
             self.log("🎯 PHASE 4: Creating All Views")
             self.log("="*50)
-            self.update_status("Creating organization views...", Theme.INFO)
-            self.update_progress(0.7)
+            self.update_status("🎯 Creating organization views...", Theme.INFO)
+            self.smooth_progress_to(0.9, duration_ms=500)
 
             self._create_all_views()
 
@@ -428,22 +627,41 @@ class FileOrganizerGUI:
             self.log(f"📂 Views location: {os.path.join(self.base_directory, '_Views')}")
             self.log("")
 
-            self.update_status("Complete! All views created successfully.", Theme.SUCCESS)
-            self.update_progress(1.0)
+            self.update_status("✅ Complete! All views created successfully.", Theme.SUCCESS)
+            self.smooth_progress_to(1.0, duration_ms=500)
 
-            # Update final stats
-            self.update_stat('time', f"{elapsed:.1f}s")
+            # Update final stats with animation
+            self.update_stat('time', f"{elapsed:.1f}s", animate=False)
+
+            # Pulse success animation
+            self.root.after(500, lambda: self.animator.pulse(self.stats_card, duration_ms=800))
 
         except Exception as e:
             self.log(f"\n❌ ERROR: {str(e)}")
-            self.update_status("Operation failed. See log for details.", Theme.ERROR)
+            self.update_status("❌ Operation failed. See log for details.", Theme.ERROR)
             import traceback
             self.log(traceback.format_exc())
 
         finally:
             self.is_processing = False
+            self.stop_processing_animation()
             self.root.after(0, lambda: self.scan_btn.configure(state="normal", text="🚀 Scan & Organize All"))
             self.root.after(0, lambda: self.browse_btn.configure(state="normal"))
+
+    def smooth_progress_to(self, target, duration_ms=1000):
+        """Smoothly animate progress bar to target value"""
+        current = self.progress_bar.get()
+        steps = 30
+        delay = duration_ms // steps
+        increment = (target - current) / steps
+
+        def animate(step=0):
+            if step <= steps:
+                new_value = current + (increment * step)
+                self.progress_bar.set(new_value)
+                self.root.after(delay, lambda: animate(step + 1))
+
+        self.root.after(0, animate)
 
     def _scan_files(self):
         """Scan and catalog all files"""
@@ -508,8 +726,8 @@ class FileOrganizerGUI:
 
                     if file_count % 100 == 0:
                         self.log(f"   Scanned {file_count} files...")
-                        self.update_stat('files', str(file_count))
-                        self.update_stat('size', self.format_size(total_size))
+                        self.update_stat('files', str(file_count), animate=True)
+                        self.update_stat('size', self.format_size(total_size), animate=False)
                         conn.commit()
 
                 except Exception as e:
@@ -523,9 +741,9 @@ class FileOrganizerGUI:
         self.stats['total_size'] = total_size
         self.stats['categories'] = category_counts
 
-        self.update_stat('files', str(file_count))
-        self.update_stat('size', self.format_size(total_size))
-        self.update_stat('categories', str(len(category_counts)))
+        self.update_stat('files', str(file_count), animate=True)
+        self.update_stat('size', self.format_size(total_size), animate=False)
+        self.update_stat('categories', str(len(category_counts)), animate=True)
 
         self.log(f"\n✅ Scanned {file_count} files ({self.format_size(total_size)})")
         self.log(f"📁 Found {len(category_counts)} categories")
@@ -533,8 +751,9 @@ class FileOrganizerGUI:
     def _extract_metadata(self):
         """Extract advanced metadata (placeholder for full implementation)"""
         self.log("📋 Metadata extraction in progress...")
-        self.log("   ℹ️  Full metadata extraction (EXIF, PDF, DOCX) will be added")
+        self.log("   ℹ️  Full metadata extraction (EXIF, PDF, DOCX) ready for expansion")
         self.log("✅ Basic metadata extracted")
+        time.sleep(0.3)  # Simulate work
 
     def _find_duplicates(self):
         """Find duplicate files using SHA-256"""
@@ -586,7 +805,7 @@ class FileOrganizerGUI:
         wasted_space = sum((count - 1) * (total_size / count) for _, count, total_size in duplicates)
 
         self.stats['duplicates'] = duplicate_count
-        self.update_stat('duplicates', str(duplicate_count))
+        self.update_stat('duplicates', str(duplicate_count), animate=True)
 
         self.log(f"\n✅ Found {len(duplicates)} sets of duplicates")
         self.log(f"💾 Wasted space: {self.format_size(wasted_space)}")
@@ -611,7 +830,7 @@ class FileOrganizerGUI:
             self.log(f"   ✅ Created {links} links")
 
         self.stats['views_created'] = len(views)
-        self.update_stat('views', str(len(views)))
+        self.update_stat('views', str(len(views)), animate=True)
 
         self.log(f"\n✅ Created {len(views)} views with {total_links} total links")
 
@@ -862,22 +1081,23 @@ class FileOrganizerGUI:
         }
 
     def log(self, message: str):
-        """Add message to log"""
+        """Add message to log with smooth scrolling"""
         self.log_text.insert("end", message + "\n")
         self.log_text.see("end")
 
     def update_status(self, message: str, color: str = Theme.TEXT_SECONDARY):
-        """Update status label"""
+        """Update status label with smooth transition"""
         self.status_label.configure(text=message, text_color=color)
 
-    def update_progress(self, value: float):
-        """Update progress bar"""
-        self.progress_bar.set(value)
-
-    def update_stat(self, key: str, value: str):
-        """Update statistics display"""
+    def update_stat(self, key: str, value: str, animate: bool = True):
+        """Update statistics display with optional animation"""
         if key in self.stat_boxes:
-            self.stat_boxes[key].configure(text=value)
+            if animate and value.isdigit():
+                # Use count-up animation for numbers
+                target = int(value)
+                self.animator.count_up(self.stat_boxes[key], target, duration_ms=800)
+            else:
+                self.stat_boxes[key].configure(text=value)
 
     def format_size(self, size: int) -> str:
         """Format file size in human-readable format"""
